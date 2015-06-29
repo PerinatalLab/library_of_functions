@@ -7,7 +7,9 @@
 #  by Julius and Jonas (2015 May 30, June 29)
 
 
-findClusters_snplist(pos,pvals,thr)
+#pos=temp$BP
+#pvals=temp$ePxtrm
+#thr=1e5
 
 findClusters_snplist = function(pos,pvals,thr) {
         pos1= sort(pos)  #  all positions of-interest (must be from a SINGLE chr!)
@@ -34,8 +36,8 @@ findClusters_snplist = function(pos,pvals,thr) {
         
         lfts=rghs=NULL
         for (i in 1:dim(out)[1]) {
-                lft=pos[out[i,"grStart"]]
-                rgh=pos[ out[i,"grStart"]+out[i,"grSize"]-1  ]
+                lft=pos1[out[i,"grStart"]]
+                rgh=pos1[ out[i,"grStart"]+out[i,"grSize"]-1  ]
                 lfts=c(lfts,lft)
                 rghs=c(rghs,rgh)
                 rm(lft,rgh)
@@ -47,6 +49,7 @@ findClusters_snplist = function(pos,pvals,thr) {
         for (i in 1:dim(out)[1]) {
         lft = out[i,"left"]
         rgh = out[i,"right"]
+        
         ix1 = which((pos >= lft)&(pos <= rgh))
         cand_pvals = pvals[ix1]
         ix2 = which(cand_pvals == min(cand_pvals))
