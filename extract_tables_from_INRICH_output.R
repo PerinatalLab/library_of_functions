@@ -6,7 +6,6 @@ getINRICHpvals = function(inrinchOutputFile) {
         inrinchOutputFile,sep="")),sep="\t",skip=1,h=T,stringsAsFactors=F)
         temp88
 }
-getINRICHpvals(input_obj)
 print("Function \"getINRICHpvals\" extracts a full table of pvalues from INRINCH output file.",quote=F)
 print("(input required: full address and name of INRICH output file)",quote=F)
 
