@@ -1,0 +1,56 @@
+#!/usr/local/Rscript
+
+# this function finds sd-based outliers for distributions that are skewed,
+# and returns "outliers-removed" vector of values (aka cleaned variable)
+
+
+
+# define a function for flaging outliers in skewed distributions
+fun_skewedCuration = function(a,low,upp,thr) {
+        # a = continuous variable (hopefully skewed)
+        # low = lowest allowed resonable value (used to reduce bias on SD estimation)
+        # upp = highest allowed reasonable value (used to reduce bias on SD estimation)
+        # thr  = threshold for normal values (in standard deviations)
+        
+        # find a position of the peak of distribution (aka center). not mean! not median!
+        dens = density(a)
+        peak = dens$x[which(dens$y == max(dens$y))]
+        
+        # apply sanity thresholds that would exclude insane outliers for at least SD estimations
+        tmp = a[ which( (a>low)&(a<upp) ) ]
+        
+        # estimate dual standard deviations
+        tmp1 = tmp-peak  # center to zero
+        lft = c( tmp1[which(tmp1<=0)],abs(tmp1[which(tmp1<0)]) ) # left side data, mirrored
+        rgh = c( tmp1[which(tmp1>=0)],-(tmp1[which(tmp1>0)]) ) # right side data, mirrored
+        sdl = sd(lft,na.rm=T)  # sd of the left side
+        sdr = sd(rgh,na.rm=T)  # sd of the right side
+        
+        # visualize the situation
+        plot(dens,lty=2,main="density of the variable and exclusion thresholds",
+             xlab = "input variable values")
+        abline(v=peak,lty=2,col="purple")
+        abline(v=c(peak-thr*sdl,peak+thr*sdr),col="turquoise")
+        
+        # what fraction of observations falls outside the thresholds?
+        print("fraction of observations inside thresholds:")
+        print(sum((tmp>(peak-thr*sdl))&(tmp<(peak+thr*sdr)),na.rm=T) / sum(!is.na(tmp)))
+        
+        # identify outliers and insiders
+        bad = which( (a<(peak-thr*sdl))|(a>(peak+thr*sdr)) )
+        good = which( (a>=(peak-thr*sdl))&(a<=(peak+thr*sdr)) )
+        
+        # plot outliers
+        points(a[bad],runif(length(bad),min=0,max=max(dens$y)),col="red")
+        
+        out = a[good]
+        out
+}  # end of function
+
+#set.seed(3)
+# generate a skewed distribution
+#a = rchisq(1e5,df=1) + rnorm(1e5) + 100
+#hist(a,breaks=100,col="grey")
+#a_curated = fun_skewedCuration(a,90,115,4)
+
+
