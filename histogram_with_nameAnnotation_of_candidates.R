@@ -40,15 +40,25 @@ fun_histogramWithAnnotations = function(all_gene_expression,all_gene_ids,selecte
         text_start = y_max*0.5 # stable, does not change. at what fraction of plot-height does the annotaion start
         text_hgh = text_start # this will be constantly incremented or reset to original value
         objs = NULL # annotation data
+        last_zero_level_ix = 1
         for (i in 1:nrow(tt2)) {
+                
                 # should the y-axis ploting coordinate be updated or kept as it was?
                 if(i>1) {   
                         if((tt2[i,1]-tt2[(i-1),1])<x_stp){
+                                if (tt2[i,1]-tt2[last_zero_level_ix,1]<x_stp*2) {
                                 text_hgh = text_hgh + y_stp
+                                } else {
+                                        last_zero_level_ix = i # reset the last time gene was plotted at zero level
+                                        text_hgh = text_start
+                                }
+                                
                         } else {
+                                last_zero_level_ix = i # reset the last time gene was plotted at zero level
                                 text_hgh = text_start
                         }
                 }
+                
                 # graphically annotate (only if you need to estimate thresholds or parameters)
                 #segments(x0=tt2[i,1],x1=tt2[i,1],y0=0,y1=text_hgh,col="grey",lwd=0.8)
                 #text(tt2[i,1],text_hgh+y_stp/2,tt2[i,2],cex=0.7)
@@ -68,5 +78,13 @@ fun_histogramWithAnnotations = function(all_gene_expression,all_gene_ids,selecte
         text(objs$x,objs$y2,objs$gene,cex=0.7)
         # plot-over the histogram body
         hist(all_gene_expression,breaks=h_brk,col="grey",border="white",add=T)
+
+# add line which shows the threshold used for entering genes on the plot
+left = center-sd_val*sd_thr
+right = center+sd_val*sd_thr
+segments(x0=c(left,right),x1=c(left,right),
+         y0=c(-y_max*.03,-y_max*.03),
+         y1=c(y_max*.03,y_max*.03),col="red",lwd=4)
+
 } # end of function
 
