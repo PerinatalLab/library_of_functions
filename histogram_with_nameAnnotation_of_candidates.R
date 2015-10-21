@@ -10,7 +10,7 @@
 
 
 fun_histogramWithAnnotations = function(all_gene_expression,all_gene_ids,selected_genes,
-                                        histgram_breaks_n,hist_title,hist_xlab,
+                                        histgram_breaks_n,hist_title,hist_xlab,sd_thr,
                                         Nmax_genes_horizontally,Nmax_genes_vertically) {
         # all_gene_expression - values of all genes (histogram data)
         # all_gene_ids - names of all genes (to be matched against the selected gene list)
@@ -25,6 +25,12 @@ fun_histogramWithAnnotations = function(all_gene_expression,all_gene_ids,selecte
         tt1 = data.frame(all_gene_expression, all_gene_ids,stringsAsFactors = F)
         tt2 = tt1[which(all_gene_ids %in% selected_genes),]
         tt2 = tt2[order(tt2$all_gene_expression),]
+        
+        # reduce the subset to only genes-outliers
+        center = mean(all_gene_expression)
+        sd_val = sd(all_gene_expression)
+        tt2 = tt2[which( (tt2$all_gene_expression<(center-sd_val*sd_thr))|
+                             (tt2$all_gene_expression>(center+sd_val*sd_thr))),]
         
         # some parameters
         y_max = max(h$counts) # the top values of histogram (height)
