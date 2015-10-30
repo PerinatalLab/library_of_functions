@@ -1,0 +1,54 @@
+#!/usr/bin/Rscript
+
+# an R script that empirically estimates how many non-founders one should expect
+# given a size of a batch (full of family trios) and a size of a random sample.
+
+# created to test wheather to exclude nonfounders in z-call training stage
+# by Jonas B. 2015 Oct 30
+
+# settings
+n_trios = 7000  #  a size of a batch full of trios
+n_rndm = 1000   #  z-call training sample
+ 
+# generate individual ids (and family ids)
+mom_ids = paste("mom_",seq(n_trios),sep="")
+dad_ids = paste("dad_",seq(n_trios),sep="")
+kid_ids = paste("kid_",seq(n_trios),sep="")
+all_ids = c(mom_ids,dad_ids,kid_ids)
+
+fun = function() {
+# take a random sample from all genotyped individuals
+smpl = sample(all_ids,n_rndm,replace = F)
+# strip family-member-identiyer and leave only family ids
+fids = NULL; for (i in 1:n_rndm) fids = c(fids, unlist(strsplit(smpl[i],"_"))[2])
+ufids = sort(unique(fids)) # only unique family ids
+n_fnd = NULL  # number of founders in each selected family 
+for (fid in ufids) { # for each family in a sample
+        tmp1 = smpl[which(fids==fid)] # get the family member ids
+        tmp2 = substr(tmp1,1,3) # extract family member status
+        if (length(tmp2)>2) { # the full trio got sampled
+                n_founders = 2 # dad+mom
+        } else {
+                if (length(tmp2)==2) { # three  scenarios
+                        if ( sum(tmp2 %in% c("mom","dad"))==2) { # if both a parents
+                                n_founders = 2  
+                        } else { # if only one is parent
+                                n_founders = 1  # i.e. kid+mom, or kid+dad
+                        }
+                } else { # equivalent to length(tmp2)==1. does not matter who is he/she
+                        n_founders = 1
+                }
+        }
+n_fnd = c(n_fnd,n_founders)
+rm(n_founders,tmp1,tmp2)
+}
+#sum(n_fnd)  # number of founders in a selected subset of cohort
+n_rndm - sum(n_fnd)  # number of individuals that should be excluded in HWE/HET estim.
+}
+
+
+# simulate multiple samplings
+n_xcl = NULL; for (z in 1:1000) n_xcl = c(n_xcl, fun())
+hist(n_xcl,breaks=50)
+
+
