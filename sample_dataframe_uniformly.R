@@ -26,8 +26,8 @@ makeUniformSample = function(df, nameX, nameY, binsX, binsY){
         df = group_by(df, binX, binY)
         
         # uncomment the function of choice
-        nsample = min(ns$n)
-        #nsample = 10 
+        #nsample = min(ns$n)
+        nsample = 10 
         #nsample = round(mean(sort(ns$n)[1:5]))
         
         if(min(ns$n) < nsample){
@@ -37,5 +37,5 @@ makeUniformSample = function(df, nameX, nameY, binsX, binsY){
         } else {
                 df = sample_n(df, nsample)
         }
-        return(ungroup(df))
+        return(as.data.frame(ungroup(df)))
 }
