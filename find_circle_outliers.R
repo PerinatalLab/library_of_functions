@@ -5,7 +5,7 @@
 #     df        input data frame
 #     x,y       two columns that will be used to create an ellipse (strings)
 #     segments  numbers of segments of interest (integer)
-#     outliers  number of outliers to return (integer)
+#     outliers  number of outliers per segment to return (integer)
 
 library(dplyr)
 
@@ -21,8 +21,10 @@ findCircleOutliers = function(df, x, y, segments, outliers){
         df = mutate(df, theta = atan2(yn, xn)/pi, r = sqrt(yn^2 + xn^2), segm = cut(theta, segments))
         
         # find outliers
-        df = top_n(df, outliers, r) %>%
-                select(-theta, -r, -xn, -yn)
+        df = group_by(df, segm) %>%
+                top_n(outliers, r) %>%
+                select(-theta, -r, -xn, -yn) %>% 
+                ungroup()
 
         colnames(df)[colnames(df) == "xx"] = x
         colnames(df)[colnames(df) == "yy"] = y
