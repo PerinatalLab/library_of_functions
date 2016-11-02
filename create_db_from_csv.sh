@@ -3,19 +3,24 @@
 #### This script converts .csv files into MySQL databases
 #### (suitable for SPSS->SQL conversion).
 ####
-#### Created by J. Juodakis on 2015-09-21
+#### Created by Julius J. on 2015-09-21
+### USAGE: ./create_db.sh input.csv 
 
+## note that if you want to split a file into >1 table,
+## do the splitting before this script, i.e.:
+# cut -d ',' -f1-1000 > Q3a.csv
+# cut -d ',' -f1,1001- > Q3b.csv
 
 ## set infile manually here. any comma separated CSV is fine
 ## table name is also set here
-INFILE='$1'
-TABLENAME='epil'
+INFILE=$1
+TABLENAME='q3b'
 rm ${INFILE}_out
 touch ${INFILE}_out
 
 ## here, number of cycles should be set to NCOLUMNS/100
 ## (recommend manually checking total variable number in SPSS)
-for i in {1..1}
+for i in {1..9}
 do
 	## first, split files into smaller no of columns
 	echo "starting chunk ${i}"
@@ -53,7 +58,7 @@ done
 ## quote field and line delimiters and file path at the end
 
 awk -v s=${INFILE} -v t=${TABLENAME} 'BEGIN{
-	print "USE epil;"; print "CREATE TABLE " t " ("
+	print "USE moba;"; print "CREATE TABLE " t " ("
 }
 { switch($2){
   case "n":
