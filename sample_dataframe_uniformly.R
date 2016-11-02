@@ -67,5 +67,5 @@ makeSymmetricSample = function(df, column, threshold){
                 bind_rows(belowThreshold)
         
         colnames(df)[colnames(df) == "filtcol"] = column
-        return(df)
+        return(as.data.frame(df))
 }
