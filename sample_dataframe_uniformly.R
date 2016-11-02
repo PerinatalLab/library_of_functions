@@ -2,6 +2,11 @@
 
 ### takes a uniformly distributed sample from a non-uniform data frame,
 ### using equally-spaced bivariate bins
+# by Julius J. 2016 Nov 02
+
+### in other words: flattens the bivariate distribution. designed for 
+### height-gestAge study, where only the "outer" observations are the 
+### most interesting ones, and gbm  takes too long to run on full sample.
 
 # USAGE: makeUniformSample(df, nameX, nameY, binsX, binsY)
 #     df      input data frame
