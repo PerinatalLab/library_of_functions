@@ -1,3 +1,5 @@
+#!/usr/bin/Rscript
+
 ### takes a uniformly distributed sample from a non-uniform data frame,
 ### using equally-spaced bivariate bins
 
