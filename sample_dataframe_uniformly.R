@@ -21,7 +21,7 @@
 
 library(dplyr)
 
-makeUniformSample = function(df, nameX, nameY, binsX, binsY){
+makeUniformSample = function(df, nameX, nameY, binsX, binsY, nsample){
         df = data.frame(df)
         df$binX = cut(df[,nameX], binsX)
         df$binY = cut(df[,nameY], binsY)
@@ -32,7 +32,7 @@ makeUniformSample = function(df, nameX, nameY, binsX, binsY){
         
         # uncomment the function of choice
         #nsample = min(ns$n)
-        nsample = 10 
+        #nsample = 10 
         #nsample = round(mean(sort(ns$n)[1:5]))
         
         if(min(ns$n) < nsample){
