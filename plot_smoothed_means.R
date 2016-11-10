@@ -2,45 +2,55 @@ library(ggplot2)
 library(dplyr)
 library(Rcpp)
 
-mfr = read.table("~/Documents/various_scripts/lga_deleteme.dat", h=T)
+### makes plots of grouped rolling means with different window sizes
+### user must create the variable bins, e.g.:
+#       mfr = read.table("~/Documents/various_scripts/lga_deleteme.dat", h=T)
+#       mfr$MLANGDbin = cut(mfr$MLANGD, seq(150, 185, by=5))
+### and then ruun this, e.g.:
+#       rollyPlot(mfr, "MLANGDbin", "LGA", "GRDBS", c(200, 700, 2000, 6000))
 
-cppFunction("NumericVector rollmeanC(NumericVector x, int w){
+# USAGE: rollyPlot(df, colname.b, colname.x, colname.y, windows)
+#       df      input data frame
+#       colname.b    name of the binned variable column, such as MLANGD (string)
+#       colname.x    name of the variable column for which we calculate the mean, such as LGA (string)
+#       colname.y    name of the variable column along which we roll, such as GA (string)
+#       windows      values of the rolling window sizes, currently 4 (vector of 4 integers)
+
+
+cppFunction("NumericVector rollmean(NumericVector x, int w){
         int lx = x.size();
-        NumericVector out(lx);
-        w = w-1;
-        for(int r = 0; r < lx; r++){
-                int l = std::max(0, (2*r - w)/2);
-                int u = std::min((lx-1), r + w/2)+1;
-                if(r < (w+1)/2 || lx-1-r < w/2){
-                        out[r] = -9;
-                } else {
-                        out[r] = std::accumulate(x.begin()+l, x.begin()+u, 0.0f)/(u-l);
-                }
+        NumericVector out(lx, NA_REAL);
+        int r = (w-1)/2;
+        for(int l = 0; l < lx-w+1; l++){
+                float oo = std::accumulate(x.begin()+l, x.begin()+l+w, 0.0f)/w;
+                out[r] = oo;
+                r++;
         }
         return out;
 }")
-rollmean = function(x, w){
-        tmp = rollmeanC(x, w)
-        tmp[which(tmp == -9)] = NA
-        return(tmp)
-}
 
-mfr$MLANGDbin = cut(mfr$MLANGD, seq(150, 185, by=5))
-mfr = group_by(mfr, MLANGDbin) %>%
-        arrange(GRDBS) %>%
-        mutate(roll1 = rollmean(LGA, 1),
-               roll200 = rollmean(LGA, 200),
-               roll700 = rollmean(LGA, 700),
-               roll2000 = rollmean(LGA, 2000),
-               roll5000 = rollmean(LGA, 5000))
+rollyPlot = function(df, colname.bins, colname.x, colname.y, windows){
+        colnames(df)[colnames(df) == colname.bins] = "MH"
+        colnames(df)[colnames(df) == colname.x] = "PHE"
+        colnames(df)[colnames(df) == colname.y] = "GA"
         
-ggplot(filter(mfr, !is.na(MLANGDbin)), aes(x=GRDBS)) +
-#        geom_point(aes(y=roll1), col="grey") +
-#        geom_line(aes(y=roll200), col="grey60") +
-        geom_line(aes(y=roll700), col="grey20") +
-        geom_line(aes(y=roll2000), col="orange", size=0.7) +
-        geom_line(aes(y=roll5000), col="red", size=1) +
-        facet_grid(.~MLANGDbin) + 
-        scale_y_log10() + coord_flip() + theme_bw()
-
+        print("calculating means...")
+        df = filter(df, !is.na(MH)) %>% group_by(MH) %>% arrange(GA) 
+        mfr_plot = bind_rows(w1 = do(df, r = rollmean(.$PHE, windows[1]), GA = .$GA),
+                             w2 = do(df, r = rollmean(.$PHE, windows[2]), GA = .$GA),
+                             w3 = do(df, r = rollmean(.$PHE, windows[3]), GA = .$GA),
+                             w4 = do(df, r = rollmean(.$PHE, windows[4]), GA = .$GA),
+                             .id="window") %>%
+                apply(1, function(x){ data.frame(window = x$window, MH = x$MH, GA = x$GA, fr=unlist(x$r)) }) %>%
+                bind_rows %>%
+                mutate(window = factor(window, labels = windows))
+        
+        print("plotting...")
+        ggplot(mfr_plot, aes(x=GA)) +
+                geom_line(aes(y=fr, col=window, size=window)) +
+                facet_grid(.~MH) +
+                scale_color_manual(values=c("grey60", "grey30", "orange", "red")) +
+                scale_size_manual(values=c(0.3, 0.5, 0.7, 1)) + 
+                coord_flip() + scale_y_log10() + theme_bw()
+}
 
