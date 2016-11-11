@@ -2,14 +2,22 @@ library(ggplot2)
 library(dplyr)
 library(Rcpp)
 
-### makes plots of grouped rolling means with different window sizes
+# by Julius, 2016 Nov 11
+
+# original use: matHgh-gestAge-LGA paper
+
+cat("\t \"rollyPlot\" function plots the rolling means/frequencies of X,
+\t over a range of Y in strata of B with four different window sizes 
+\t (N of observations) used to compute mean/freq.
+\t original use: X=LGA, Y=gestAge, B=matHgh")
+
 ### user must create the variable bins, e.g.:
 #       mfr = read.table("~/Documents/various_scripts/lga_deleteme.dat", h=T)
 #       mfr$MLANGDbin = cut(mfr$MLANGD, seq(150, 185, by=5))
 ### and then ruun this, e.g.:
 #       rollyPlot(mfr, "MLANGDbin", "LGA", "GRDBS", c(200, 700, 2000, 6000))
 
-# USAGE: rollyPlot(df, colname.b, colname.x, colname.y, windows)
+cat("\n \t USAGE: rollyPlot(df, colname.b, colname.x, colname.y, windows)")
 #       df      input data frame
 #       colname.b    name of the binned variable column, such as MLANGD (string)
 #       colname.x    name of the variable column for which we calculate the mean, such as LGA (string)
