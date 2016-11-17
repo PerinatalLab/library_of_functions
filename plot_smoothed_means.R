@@ -4,20 +4,18 @@ library(Rcpp)
 
 # by Julius, 2016 Nov 11
 
-# original use: matHgh-gestAge-LGA paper
+###     "rollyPlot" function plots the rolling means/frequencies of X
+###     over a range of Y in strata of B with four different window sizes 
+###     (N of observations) used to compute mean/freq.
+###     original use: X=LGA, Y=gestAge, B=matHgh")
 
-cat("\t \"rollyPlot\" function plots the rolling means/frequencies of X,
-\t over a range of Y in strata of B with four different window sizes 
-\t (N of observations) used to compute mean/freq.
-\t original use: X=LGA, Y=gestAge, B=matHgh")
+###     user must create the variable bins, e.g.:
+###               mfr = read.table("~/Documents/various_scripts/lga_deleteme.dat", h=T)
+###               mfr$MLANGDbin = cut(mfr$MLANGD, seq(150, 185, by=5))
+###     and then run this, e.g.:
+###               rollyPlot(mfr, "MLANGDbin", "LGA", "GRDBS", c(200, 700, 2000, 6000))
 
-### user must create the variable bins, e.g.:
-#       mfr = read.table("~/Documents/various_scripts/lga_deleteme.dat", h=T)
-#       mfr$MLANGDbin = cut(mfr$MLANGD, seq(150, 185, by=5))
-### and then ruun this, e.g.:
-#       rollyPlot(mfr, "MLANGDbin", "LGA", "GRDBS", c(200, 700, 2000, 6000))
-
-cat("\n \t USAGE: rollyPlot(df, colname.b, colname.x, colname.y, windows)")
+###     USAGE: rollyPlot(df, colname.b, colname.x, colname.y, windows)
 #       df      input data frame
 #       colname.b    name of the binned variable column, such as MLANGD (string)
 #       colname.x    name of the variable column for which we calculate the mean, such as LGA (string)
@@ -63,6 +61,5 @@ rollyPlot = function(df, colname.bins, colname.x, colname.y, windows){
                 scale_color_manual(values=c("grey60", "grey30", "orange", "red")) +
                 scale_size_manual(values=c(0.3, 0.5, 0.7, 1)) + 
                 scale_y_log10(breaks=c(0.001, 0.003, 0.01, 0.03, 0.1)) +
-                coord_flip() + theme_bw()
+                coord_flip() + theme_bw() + xlab(colname.y) + ylab(colname.x)
 }
-
