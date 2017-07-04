@@ -18,10 +18,10 @@ library(ggplot2)
 
 #pval_mom = read.table("~/Desktop/MoBa_QCed_5530/analysis_151203/moms_gxe_pvals", h=T)
 pval_fet = read.table("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_gxe_pvals", h=T)
-pval_mom = read.table("~/Desktop/MoBa_QCed_5530/analysis_151217/moms_gxe_pvals", h=T)
+pval_mom = read.table("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_gxe_pvals", h=T)
 
-#covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_covariates_caff_drinks", h=T)
-covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_folatecovariates", h=T)
+covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_covariates_caff_drinks", h=T)
+#covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_folatecovariates", h=T)
 
 map = read.table("~/soft/inrich/refs/ucsc_withRefseqSummary.txt", fill=T, sep="\t", h=T, quote='')
 preterm = readLines("~/soft/inrich/refs/gene_lists_preterm_hugo.txt")
@@ -79,7 +79,7 @@ renderPlot({
         ss = input$select_source
         
         if(input$select_genomes == "Maternal"){
-                source_file = paste("~/Desktop/MoBa_QCed_5530/analysis_151217/moms_", ss, "_stageii.raw", sep="")
+                source_file = paste("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_", ss, "_stageii.raw", sep="")
         } else {
                 source_file = paste("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_", ss, "_stageii.raw", sep="")
         }
@@ -89,7 +89,7 @@ renderPlot({
         colnames(raw) = sapply(strsplit(colnames(raw), "_"), "[[", 1 )
         phenos = raw[, c("PHENOTYPE", ss)]
         names(phenos)[2] = "env"
-        if(ss=="caffquant" | grep("fol", ss)==1){
+        if(ss=="caffquant" | grepl("fol", ss)){
                 phenos$env = round(phenos$env, -2)
         } else if(!ss %in% c("caff50", "caff200", "caff300")){
                 phenos$env = ifelse(phenos$env>1, 1, 0)
