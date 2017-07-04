@@ -1,0 +1,193 @@
+---
+title: "GxE result viewer"
+author: "J. Juodakis"
+date: "December 8, 2015"
+runtime: shiny
+output: html_document
+---
+
+This script provides fast visual inspection of GxE analysis results and automated SNP annotation.
+
+```{r initialize, echo=FALSE, warning=FALSE, message=FALSE}
+options(stringsAsFactors = F)
+library(dplyr)
+library(ggplot2)
+
+### pval files must have at least SNP, BP, CHR, P and source columns
+### sorting not needed
+
+#pval_mom = read.table("~/Desktop/MoBa_QCed_5530/analysis_151203/moms_gxe_pvals", h=T)
+pval_fet = read.table("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_gxe_pvals", h=T)
+pval_mom = read.table("~/Desktop/MoBa_QCed_5530/analysis_151217/moms_gxe_pvals", h=T)
+
+#covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_covariates_caff_drinks", h=T)
+covcaff = read.table("~/Desktop/MoBa_QCed_5530/MoBa_folatecovariates", h=T)
+
+map = read.table("~/soft/inrich/refs/ucsc_withRefseqSummary.txt", fill=T, sep="\t", h=T, quote='')
+preterm = readLines("~/soft/inrich/refs/gene_lists_preterm_hugo.txt")
+sources = unique(pval_mom$source)
+
+markedSnps = reactiveValues()
+markedSnps$df = data.frame(matrix(FALSE, nrow=20, ncol=length(sources)))
+```
+
+### GxE analysis results
+
+```{r selectsource, echo=FALSE}
+inputPanel(
+        selectInput("select_genomes", label="Select the source of genomes to analyze:", choices=c("Maternal", "Fetal")),
+        selectInput("select_source", label="Select the environment factor to analyze:", choices=sources),
+        selectInput("select_snp", label="Select the SNP to analyze:", choices=1:20),
+        
+         renderText({
+                 sn = which(sources==input$select_source)
+                 paste("Currently marked SNPs:",
+                 paste(which(markedSnps$df[,sn]), collapse=","))
+         })
+)
+observe({
+        input$select_genomes
+        markedSnps$df = data.frame(matrix(FALSE, nrow=20, ncol=length(sources)))
+})
+```
+
+```{r plotgxe, echo=FALSE}
+pvals = NULL
+interestingSNP = NULL
+interestingBP = NULL
+interestingCHR = NULL
+
+pvals = reactive({
+        if(input$select_genomes == "Maternal"){
+                pvals = pval_mom
+        } else {
+                pvals = pval_fet
+        }
+        pvals = group_by(pvals, source)
+        filter(pvals, rank(P)<=20, source==input$select_source)  %>% arrange(P)
+})
+
+interestingSNP = reactive({ pvals()$SNP[as.integer(input$select_snp)] })
+interestingCHR = reactive({ pvals()$CHR[as.integer(input$select_snp)] })
+interestingBP = reactive({ pvals()$BP[as.integer(input$select_snp)] })
+
+renderPlot({
+        pvals = pvals()
+        interestingSNP = interestingSNP()
+        interestingCHR = interestingCHR()
+        interestingBP = interestingBP()
+        ss = input$select_source
+        
+        if(input$select_genomes == "Maternal"){
+                source_file = paste("~/Desktop/MoBa_QCed_5530/analysis_151217/moms_", ss, "_stageii.raw", sep="")
+        } else {
+                source_file = paste("~/Desktop/MoBa_QCed_5530/analysis_151207/fets_", ss, "_stageii.raw", sep="")
+        }
+
+        raw = read.table(source_file, h=T)
+        raw = inner_join(raw, covcaff, by="IID")
+        colnames(raw) = sapply(strsplit(colnames(raw), "_"), "[[", 1 )
+        phenos = raw[, c("PHENOTYPE", ss)]
+        names(phenos)[2] = "env"
+        if(ss=="caffquant" | grep("fol", ss)==1){
+                phenos$env = round(phenos$env, -2)
+        } else if(!ss %in% c("caff50", "caff200", "caff300")){
+                phenos$env = ifelse(phenos$env>1, 1, 0)
+        }
+         
+         ggg = raw[, interestingSNP]
+         reduced = cbind(phenos, ggg) %>%
+                 group_by(ggg, env) %>%
+                 summarize(avg=mean(PHENOTYPE), count=n())
+         
+         print(ggplot(reduced, aes(x=env, y=avg, col=as.factor(ggg))) +
+                       geom_line() + geom_point(aes(size=log(count, 10))) +
+                       ggtitle(paste("Genomes: ", input$select_genomes,
+                                     "\n Environmental factor: ", ss,
+                                     "\n SNP: ", interestingSNP,
+                                     "\n GxE p-value: ", pvals$P[as.integer(input$select_snp)], sep="")))
+
+})
+```
+
+
+### Genomic context
+
+```{r settings_genome, echo=FALSE}
+div(
+        fluidRow(
+        column(8,
+               sliderInput("genome_range", "Select the maximum distance for including genes in the genome viewer:", 
+                    min = 1, max = 1e3, round=1, post = "kb", value=10, width="100%")
+        ),
+        
+        column(4,
+               br(),
+               actionButton("markSnp", "Mark/unmark current SNP"),
+               br(),
+                renderText({
+                        sn = which(sources==input$select_source)
+                        ifelse(markedSnps$df[as.integer(input$select_snp), sn], "MARKED", "unmarked")
+                }),
+               style="text-align:center"
+        )
+        ),
+        class="shiny-input-panel"
+)
+```
+
+```{r plotgenomecontext, echo=FALSE}
+observeEvent(input$markSnp, {
+        snp = as.integer(input$select_snp)
+        sn = which(sources==input$select_source)
+        markedSnps$df[snp, sn] = !markedSnps$df[snp, sn]
+})
+
+relevantGenes = reactive({
+        interestingSNP = interestingSNP()
+        interestingCHR = interestingCHR()
+        interestingBP = interestingBP()
+        thr = input$genome_range*1000
+        
+        relevantGenes = map[map$CHR==interestingCHR & ((map$STOP>interestingBP-thr & map$STOP<interestingBP+thr) |
+                                     (map$START<interestingBP+thr & map$START>interestingBP-thr)),]
+        if(nrow(relevantGenes)==0){
+                relevantGenes = data.frame(CHR=interestingCHR, START=interestingBP, STOP=interestingBP, GENE=interestingSNP, DESCRIPTION="(target SNP)", SUMMARY="")
+        }
+        relevantGenes$ypos = rep(1:5, length.out=nrow(relevantGenes))
+        relevantGenes$snppos = interestingBP
+        relevantGenes$inPreterm = relevantGenes$GENE %in% preterm
+        relevantGenes
+})
+
+renderPlot({
+        relevantGenes = relevantGenes()
+        ggplot(relevantGenes) + geom_segment(aes(x=START, xend=STOP, y=ypos, yend=ypos, col=inPreterm), lwd=3) +
+                geom_text(aes(label=GENE, x=(START+STOP)/2, y=ypos+0.2), size=4, fontface="italic") +
+                geom_vline(aes(xintercept=snppos), linetype="dotted") +
+                scale_color_manual(values=c("darkblue", "red")) +
+                scale_x_continuous(breaks = pretty(c(interestingBP(), relevantGenes$START, relevantGenes$STOP), 10)) +
+                theme(panel.background=element_blank(), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank(),
+                      panel.grid.minor.x=element_line(linetype = "dashed", colour = "grey"),
+                      panel.border=element_rect(fill = NA, color="grey50"),
+                      axis.title.y=element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank())
+})
+
+```
+
+### Gene function and relevance to preterm birth
+
+```{r relevance, echo=FALSE}
+renderTable({
+        relevantGenes = relevantGenes()
+        relevantGenes$distance = ifelse(abs(relevantGenes$START-relevantGenes$snppos)<abs(relevantGenes$STOP-relevantGenes$snppos), relevantGenes$START, relevantGenes$STOP)
+        relevantGenes$distance = paste(round((relevantGenes$distance - relevantGenes$snppos)/1000), "kb")
+        relevantGenes[,c("CHR", "START", "STOP", "distance", "GENE", "DESCRIPTION", "inPreterm")]
+}, include.rownames=FALSE)
+
+renderTable({
+        relevantGenes = relevantGenes()
+        relevantGenes[,c("GENE", "SUMMARY")]
+}, include.rownames=FALSE)
+
+```
